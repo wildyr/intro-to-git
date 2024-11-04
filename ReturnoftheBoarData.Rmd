@@ -1,0 +1,67 @@
+---
+title: "ReturnoftheBoarData"
+author: "Rob Wildy"
+date: "2024-11-04"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r declare}
+dframe1 <- read.csv("data/Boar.csv", header = T, na = "NA", stringsAsFactors = T)
+#Reading in the Boar.csv data
+
+str(dframe1)
+
+#install.packages("dplyr")
+#library(dplyr)
+
+str(dframe1) #Tidier version of str()
+summary(dframe1)
+
+pairs(dframe1) #Plots all the variables against each other
+#We can see age and length are correlated.
+#This sometimes makes a mess
+
+range(dframe1$length, na.rm = T)
+```
+
+
+```{r pressure, echo=FALSE}
+model1 <- glm(Tb~length, data = dframe1, na.action = na.omit, family=binomial(link = "logit"))
+#We know to use binomial because the TB (y) only takes values of 0 or 1. 
+#logit is a value of the log of odds. 
+par(mfrow=c(2,2))
+plot(model1) #Plots the 4 residual plot. 
+#1: The top and bottom should not cross the middle line, this means that theres no false positive or false negative
+par(mfrow=c(1,1))
+
+summary(model1) #This shows us that length and the intercept is significantly different Where the length estimate different is in the logit units (e.g. 0.03logits)
+
+#Model Predictions
+plot(Tb ~ length, data = dframe1)
+
+newDat <- expand.grid(length = seq(46.5,165,0.5))
+
+pred <- predict(model1, newdata = newDat, 
+                type = "response", se.fit = T, na.rm = T)
+#se.fit allows you to include the standard error within it
+#This expand must include all X variables we include in our model. The seq(min, max, stepwise_change/intervals)
+#Why do we have different types of 'type'?
+
+predFrame <- data.frame(pred, length = newDat$length) #Combinging the datasets
+head(predFrame)
+```
+
+```{r}
+plot(Tb ~ length, data = dframe1) #Empty plot of just Tb and Length
+
+#Perfect Prediction line
+lines(fit ~ length, data = predFrame, lw = 1.5, col = "blue") #Adds the middle line
+
+#Predictions +/- the error. 
+lines(fit+se.fit ~ length, data = predFrame, lw = 1.5, col = "blue", lty = 2)
+lines(fit-se.fit ~ length, data = predFrame, lw = 1.5, col = "blue", lty = 2)
+```
